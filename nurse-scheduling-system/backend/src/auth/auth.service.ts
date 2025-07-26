@@ -28,7 +28,7 @@ export class AuthService {
       username: user.username, 
       sub: user.id, 
       role: user.role,
-      nurseId: user.nurse?.id 
+      nurse_id: user.nurse_id 
     };
     
     return {
@@ -40,9 +40,5 @@ export class AuthService {
         nurse: user.nurse,
       },
     };
-  }
-
-  async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 10);
   }
 }
