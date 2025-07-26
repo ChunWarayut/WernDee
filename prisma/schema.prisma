@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUM Definitions ---
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Qualification {
+  RN // Registered Nurse
+  PN // Practical Nurse
+}
+
+enum SpecialCondition {
+  NONE
+  HEAD_NURSE
+  SENIOR
+  PREGNANT
+}
+
+enum RequestType {
+  LEAVE
+  SHIFT_EXCHANGE
+}
+
+enum RequestStatus {
+  PENDING_PEER_APPROVAL
+  PENDING_ADMIN_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum AssignmentType {
+  AUTOMATED
+  MANUAL_SWAP
+}
+
+// --- Model Definitions ---
+
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  password_hash String
+  role          Role     @default(USER)
+  nurse         Nurse?   @relation(fields: [nurse_id], references: [id])
+  nurse_id      Int?     @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Nurse {
+  id                    Int                  @id @default(autoincrement())
+  first_name            String
+  last_name             String
+  qualification         Qualification
+  special_condition     SpecialCondition     @default(NONE)
+  user                  User?
+  requests_made         Request[]            @relation("Requester")
+  requests_received     Request[]            @relation("TargetNurse")
+  schedule_assignments  ScheduleAssignment[]
+}
+
+model Shift {
+  id          Int                  @id @default(autoincrement())
+  name        String // e.g., "เช้า", "บ่าย", "ดึก"
+  start_time  String // e.g., "08:00"
+  end_time    String // e.g., "16:00"
+  assignments ScheduleAssignment[]
+}
+
+model ScheduleRule {
+  id                   Int @id @default(autoincrement())
+  min_nurses_per_shift Int
+  max_consecutive_days Int
+  // สามารถเพิ่มกฎอื่นๆ ได้ตามต้องการ
+}
+
+model Request {
+  id                   Int                 @id @default(autoincrement())
+  request_type         RequestType
+  status               RequestStatus
+  requester            Nurse               @relation("Requester", fields: [requester_id], references: [id])
+  requester_id         Int
+  target_nurse         Nurse?              @relation("TargetNurse", fields: [target_nurse_id], references: [id])
+  target_nurse_id      Int?
+  source_assignment    ScheduleAssignment? @relation("SourceAssignment", fields: [source_assignment_id], references: [id])
+  source_assignment_id Int?                @unique
+  target_assignment    ScheduleAssignment? @relation("TargetAssignment", fields: [target_assignment_id], references: [id])
+  target_assignment_id Int?                @unique
+  leave_start_date     DateTime?
+  leave_end_date       DateTime?
+  createdAt            DateTime            @default(now())
+}
+
+model ScheduleAssignment {
+  id                Int            @id @default(autoincrement())
+  date              DateTime       @db.Date
+  assignment_type   AssignmentType @default(AUTOMATED)
+  nurse             Nurse          @relation(fields: [nurse_id], references: [id])
+  nurse_id          Int
+  shift             Shift          @relation(fields: [shift_id], references: [id])
+  shift_id          Int
+  source_in_request Request?       @relation("SourceAssignment")
+  target_in_request Request?       @relation("TargetAssignment")
+
+  @@unique([date, nurse_id], name: "OneShiftPerDayPerNurse")
+}
