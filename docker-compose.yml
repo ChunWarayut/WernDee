@@ -4,7 +4,7 @@ services:
   # --- Backend Service (NestJS) ---
   backend:
     build:
-      context: ./backend
+      context: ./nurse-scheduling-system/backend
     container_name: werndee_backend
     restart: unless-stopped
     env_file:
@@ -17,7 +17,7 @@ services:
   # --- Frontend Service (React) ---
   frontend:
     build:
-      context: ./frontend
+      context: ./nurse-scheduling-system/frontend
     container_name: werndee_frontend
     restart: unless-stopped
     networks:
